@@ -4,6 +4,8 @@ class Task:
         self.name = name
         self.description = description
         self.status = status
+        self.possible_subreddits = []
+        self.reddit_datas = []
 
         # Pipeline step flags
         self.should_find_subreddit = False
@@ -20,3 +22,11 @@ class Task:
     def __str__(self):
         return f"{self.name}: {self.description} - {self.status}"
 
+
+class RedditData:
+    def __init__(self, subreddit: str, data: dict):
+        self.subreddit = subreddit
+        self.data = data
+
+    def __str__(self):
+        return f"{self.subreddit}: {self.data}"
