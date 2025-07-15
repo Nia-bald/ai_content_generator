@@ -35,25 +35,25 @@ class VideoGenerationPipeline:
         # Example pipeline flow (details to be filled in)
         for task in task_list:
             
-            if getattr(task, "should_find_subreddit", False):
+            if task.should_find_subreddit == True:
                 task = self.subreddit_finder.find(task)
-            if getattr(task, "should_collect_reddit_data", False):
+            if task.should_collect_reddit_data == True:
                 task = self.reddit_collector.collect(task)
-            if getattr(task, "should_classify", False):
+            if task.should_classify == True:
                 task = self.classifier.classify(task)
-            if getattr(task, "should_rank", False):
+            if task.should_rank == True:
                 task = self.ranker.rank(task)
-            if getattr(task, "should_select_post", False):
+            if task.should_select_post == True:
                 task = self.post_selector.select(task)
-            if getattr(task, "should_generate_text", False):
+            if task.should_generate_text == True:
                 task = self.text_generator.generate(task)
-            if getattr(task, "should_synthesize_audio", False):
+            if task.should_synthesize_audio == True:
                 task = self.audio_synth.synthesize(task)
-            if getattr(task, "should_select_video", False):
+            if task.should_select_video == True:
                 task = self.video_selector.select_video(task)
-            if getattr(task, "should_edit_video", False):
+            if task.should_edit_video == True:
                 task = self.video_editor.edit(task)
-            if getattr(task, "should_upload", False):
+            if task.should_upload == True:
                 task = self.uploader.upload(task)
         # Channel finder and downloader can be integrated as needed
 

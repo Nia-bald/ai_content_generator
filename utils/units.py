@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class Task:
     # Flags for each pipeline step
     def __init__(self, name=None, description=None, status=None):
@@ -5,23 +8,29 @@ class Task:
         self.description = description
         self.status = status
         self.possible_subreddits = []
-        self.reddit_datas = []
-
+        self.reddit_datas = RedditDataList([])
+        self.post_selection_strategy = PostSelectionStrategyEnum.MOST_UPVOTED
+        self.processed_reddit_data = {}
         # Pipeline step flags
-        self.should_find_subreddit = False
-        self.should_collect_reddit_data = False
-        self.should_classify = False
-        self.should_rank = False
-        self.should_select_post = False
-        self.should_generate_text = False
-        self.should_synthesize_audio = False
-        self.should_select_video = False
-        self.should_edit_video = False
-        self.should_upload = False
+        self.should_find_subreddit = True
+        self.should_collect_reddit_data = True
+        self.should_classify = True
+        self.should_rank = True
+        self.should_select_post = True
+        self.should_generate_text = True
+        self.should_synthesize_audio = True
+        self.should_select_video = True
+        self.should_edit_video = True
+        self.should_upload = True
 
     def __str__(self):
         return f"{self.name}: {self.description} - {self.status}"
 
+
+class PostSelectionStrategyEnum(Enum):
+    MOST_UPVOTED = "MostUpvotedPostStrategy"
+    MOST_RECENT = "MostRecentPostStrategy"
+    MOST_CONTROVERSIAL = "MostControversialPostStrategy"
 
 class RedditData:
     def __init__(self, subreddit: str, data: dict):
@@ -30,3 +39,19 @@ class RedditData:
 
     def __str__(self):
         return f"{self.subreddit}: {self.data}"
+
+class RedditDataList:
+    def __init__(self, reddit_datas: list[RedditData]=[]):
+        self.reddit_datas = reddit_datas
+        self.subreddit_to_reddit_data = {reddit_data.subreddit: reddit_data for reddit_data in reddit_datas}
+    
+    def add_reddit_data(self, reddit_data: RedditData):
+        self.reddit_datas.append(reddit_data)
+        self.subreddit_to_reddit_data[reddit_data.subreddit] = reddit_data
+    
+    def get_reddit_data(self, subreddit: str)->RedditData:
+        return self.subreddit_to_reddit_data[subreddit]
+    
+    def __str__(self):
+        return f"{self.reddit_datas}"
+
