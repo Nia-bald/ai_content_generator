@@ -15,3 +15,4 @@ venv/
 # OS
 Thumbs.db
 ehthumbs.db
+database.db
