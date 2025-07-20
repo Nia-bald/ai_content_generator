@@ -13,10 +13,12 @@ from video_pipeline.video_uploader import VideoUploader
 from video_pipeline.video_downloader import VideoDownloader
 
 from utils.units import Task
+from utils.data_base import LocalDatabase
+import uuid
 
 # Main pipeline orchestrator
 class VideoGenerationPipeline:
-    def __init__(self):
+    def __init__(self, db_path: str = 'database.db'):
         self.subreddit_finder = SubredditFinder()
         self.reddit_collector = RedditDataCollector()
         self.classifier = ClassificationAlgorithm()
@@ -29,6 +31,7 @@ class VideoGenerationPipeline:
         self.uploader = VideoUploader()
         self.channel_finder = ChannelFinder()
         self.video_downloader = VideoDownloader()
+        self.db = LocalDatabase(db_path)
 
     def run(self, task_list: list[Task]):
 
@@ -45,6 +48,7 @@ class VideoGenerationPipeline:
                 task = self.ranker.rank(task)
             if task.should_select_post == True:
                 task = self.post_selector.select(task)
+                self.save_to_db(task)
             if task.should_generate_text == True:
                 task = self.text_generator.generate(task)
             if task.should_synthesize_audio == True:
@@ -57,3 +61,31 @@ class VideoGenerationPipeline:
                 task = self.uploader.upload(task)
         # Channel finder and downloader can be integrated as needed
 
+    def save_to_db(self, task: Task):
+        db = self.db
+        for subreddit_name, data in task.processed_reddit_data.items():
+            op_details = []
+            for ix, row in data.iterrows():
+                op_details.append({
+                    'OpName': row['author_fullname'],
+                    'OpFollowers': None # TODO: get followers from reddit api
+                })
+            db.execute_insert('OpInfo', op_details)
+
+            content_details = []
+            for ix, row in data.iterrows():
+                content_details.append({
+                    'PostId': str(uuid.uuid4()),
+                    'Content': row['selftext'],
+                    'Type': None, # TODO: get type from reddit api
+                    'MediaPath': None, # TODO: get media path from reddit api
+                    'SubredditName': subreddit_name,
+                    'Rank': None,
+                    'RankingAlgorithm': None,
+                    'EngagmentTableId': None,
+                    'OpInfoId': row['author_fullname'],
+                    'PostProductionTableId': None
+                })
+            db.execute_insert('RedditPostTable', content_details)
+        db.close()
+        return task
