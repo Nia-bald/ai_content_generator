@@ -11,6 +11,8 @@ class Task:
         self.reddit_datas = RedditDataList([])
         self.post_selection_strategy = PostSelectionStrategyEnum.MOST_UPVOTED
         self.processed_reddit_data = {}
+        self.generated_reddit_data = {}
+        self.generated_audio_paths = {}
         # Pipeline step flags
         self.should_find_subreddit = True
         self.should_collect_reddit_data = True
@@ -19,9 +21,9 @@ class Task:
         self.should_select_post = True
         self.should_generate_text = True
         self.should_synthesize_audio = True
-        self.should_select_video = True
-        self.should_edit_video = True
-        self.should_upload = True
+        self.should_select_video = False
+        self.should_edit_video = False
+        self.should_upload = False
 
     def __str__(self):
         return f"{self.name}: {self.description} - {self.status}"
