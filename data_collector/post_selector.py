@@ -2,13 +2,23 @@ from abc import ABC, abstractmethod
 from utils.units import Task
 from utils.units import PostSelectionStrategyEnum
 import pandas as pd
+import uuid
 
 class PostSelector:
     """Selects posts for further processing."""
     def select(self, task: Task):
         post_selection_strategy = PostSelectionStrategyFactory().get_strategy(task)
-        return post_selection_strategy.select(task)  # Logic to select posts 
+        task = post_selection_strategy.select(task)  # Logic to select posts 
+        task = self.populate_post_details(task)
+        return task
 
+    def populate_post_details(self, task: Task):
+        for subreddit, reddit_data in task.processed_reddit_data.items():
+            reddit_data['PostId'] = [str(uuid.uuid4()) for _ in range(len(reddit_data))]
+            reddit_data['Tags'] = ""
+            reddit_data['Description'] = ""
+            task.processed_reddit_data[subreddit] = reddit_data
+        return task
 
 class PostSelectionStrategy(ABC):
 

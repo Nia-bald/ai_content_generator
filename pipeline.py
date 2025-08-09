@@ -75,7 +75,7 @@ class VideoGenerationPipeline:
             content_details = []
             for ix, row in data.iterrows():
                 content_details.append({
-                    'PostId': str(uuid.uuid4()),
+                    'PostId': row['PostId'],
                     'Content': row['selftext'],
                     'Type': None, # TODO: get type from reddit api
                     'MediaPath': None, # TODO: get media path from reddit api
