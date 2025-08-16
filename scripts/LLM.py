@@ -1,8 +1,6 @@
 import os
-from dotenv import load_dotenv
 import openai
 
-load_dotenv()
 
 class LLMClient:
     def __init__(self):

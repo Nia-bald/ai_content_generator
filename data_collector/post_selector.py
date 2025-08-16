@@ -22,7 +22,7 @@ class MostUpvotedPostStrategy(PostSelectionStrategy):
         for subreddit, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
             pandas_data = reddit_data.to_pandas_dataframe(filter_out=False)
             # TODO: these top_x values should come from config ans should be diff for each individual subreddit
-            top_10_posts = pandas_data.sort_values(by='ups', ascending=False).head(10)
+            top_10_posts = pandas_data.sort_values(by='ups', ascending=False).head(3)
             top_10_post_id = list(top_10_posts['id'].values)
             for post_id in top_10_post_id:
                 reddit_data.post_data_dict.get(post_id).filtered_out = False

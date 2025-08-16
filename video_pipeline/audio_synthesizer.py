@@ -10,9 +10,6 @@ class AudioSynthesizer:
         os.makedirs(output_dir, exist_ok=True)
 
     def synthesize(self, task: Task):
-        if not hasattr(task, "generated_reddit_data") or not task.generated_reddit_data:
-            print("[AudioSynthesizer] No generated text found in task.")
-            return task
 
         for subreddit, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
             subreddit_dir = os.path.join(self.output_dir, subreddit)

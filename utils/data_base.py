@@ -10,6 +10,7 @@ class LocalDatabase:
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
+        self.table_name_to_primary_key = {"opinfo":"OpInfoId", "redditposttable":"PostId"}
 
     def execute_write(self, query: str, params: Optional[Tuple[Any, ...]] = None) -> None:
         """
@@ -29,8 +30,14 @@ class LocalDatabase:
         :param table_name: Name of the table to insert into.
         :param data: List of dictionaries containing the data to insert.
         """
+        primary_key = self.table_name_to_primary_key.get(table_name.lower())
         for row in data:
-            query = f"INSERT INTO {table_name} ({', '.join(row.keys())}) VALUES ({', '.join(['?' for _ in row.keys()])})"
+            query = f"""
+            INSERT INTO {table_name} ({', '.join(row.keys())})
+            VALUES ({', '.join(['?' for _ in row.keys()])})
+            ON CONFLICT ({primary_key})
+            DO UPDATE SET {', '.join([f"{col}=excluded.{col}" for col in row.keys() if col != primary_key])}
+            """
             self.execute_write(query, tuple(row.values()))
     
     def execute_read(self, query: str, params: Optional[Tuple[Any, ...]] = None) -> List[Tuple[Any, ...]]:

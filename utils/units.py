@@ -19,13 +19,14 @@ class Task:
         self.should_select_post = True
         self.should_generate_text = True
         self.should_synthesize_audio = True
-        self.should_select_video = False
-        self.should_edit_video = False
+        self.should_select_video = True
+        self.should_edit_video = True
         self.should_upload = False
+        self.success = None
 
     def __str__(self):
         return f"{self.name}: {self.description} - {self.status}"
-
+    
 
 class PostSelectionStrategyEnum(Enum):
     MOST_UPVOTED = "MostUpvotedPostStrategy"
@@ -39,25 +40,38 @@ class PostData:
         title: str,
         selftext: str,
         subreddit: str,
+        ups=None,
+        score=None,
+        num_comments=None,
+        created_utc=None,
+        author_fullname=None,
+        author=None,
+        permalink=None,
+        upvote_ratio=None,
+        is_self=None,
+        over_18=None,
+        spoiler=None,
         **kwargs
     ):
         self.id = id
         self.title = title
         self.selftext = selftext
         self.subreddit = subreddit
-        self.ups = None
-        self.score = None
-        self.num_comments = None
-        self.created_utc = None
-        self.author = None
-        self.permalink = None
-        self.upvote_ratio = None
-        self.is_self = None
-        self.over_18 = None
-        self.spoiler = None
+        self.ups = ups
+        self.score = score
+        self.num_comments = num_comments
+        self.created_utc = created_utc
+        self.author_fullname = author_fullname
+        self.author = author
+        self.permalink = permalink
+        self.upvote_ratio = upvote_ratio
+        self.is_self = is_self
+        self.over_18 = over_18
+        self.spoiler = spoiler
         self.filtered_out = True
         self.narration = None
         self.synthesized_audio_file_path = None
+        self.video_file_path = None
     
     def __str__(self):
         return f"{self.id}: {self.title} - {self.selftext} - {self.subreddit}"
@@ -80,6 +94,9 @@ class RedditData:
     def get_unfiltered_data(self):
         return self.post_data_dict
     
+    def get_all_posts(self, filter_out=True):
+        return [post for post in list(self.post_data_dict.values()) if filter_out and not post.filtered_out]
+
     def to_pandas_dataframe(self, filter_out = True):
         """
         Converts the RedditData's posts into a pandas DataFrame.
@@ -88,7 +105,7 @@ class RedditData:
 
         rows = []
         for post_id, post_data in self.post_data_dict.items():
-            if filter_out and post_data.filtered_out == False:
+            if filter_out and post_data.filtered_out == True:
                 continue
             row = {
                 "id": post_data.id,
@@ -99,6 +116,7 @@ class RedditData:
                 "score": post_data.score,
                 "num_comments": post_data.num_comments,
                 "created_utc": post_data.created_utc,
+                "author_fullname": post_data.author_fullname,
                 "author": post_data.author,
                 "permalink": post_data.permalink,
                 "upvote_ratio": post_data.upvote_ratio,
@@ -112,7 +130,7 @@ class RedditData:
 class RedditDataList:
     def __init__(self, reddit_datas: list[RedditData]=[]):
         self.reddit_datas = reddit_datas
-        self.subreddit_to_reddit_data = {reddit_data.subreddit: reddit_data for reddit_data in reddit_datas}
+        self.subreddit_to_reddit_data: dict[str, RedditData] = {reddit_data.subreddit: reddit_data for reddit_data in reddit_datas}
     
     def add_reddit_data(self, reddit_data: RedditData):
         self.reddit_datas.append(reddit_data)
@@ -121,6 +139,12 @@ class RedditDataList:
     def get_reddit_data(self, subreddit: str)->RedditData:
         return self.subreddit_to_reddit_data[subreddit]
     
+    def get_all_posts(self, filter_out=True)-> list[PostData]:
+        posts = []
+        for subreddit, reddit_datas in self.subreddit_to_reddit_data.items():
+            posts.extend(reddit_datas.get_all_posts(filter_out=filter_out))
+        return posts
+
     def __str__(self):
         return f"{self.reddit_datas}"
 
