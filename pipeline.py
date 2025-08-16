@@ -63,19 +63,20 @@ class VideoGenerationPipeline:
 
     def save_to_db(self, task: Task):
         db = self.db
-        for subreddit_name, data in task.processed_reddit_data.items():
+        for subreddit_name, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
+            pandas_data = reddit_data.to_pandas_dataframe()
             op_details = []
-            for ix, row in data.iterrows():
+            for ix, row in pandas_data.iterrows():
                 op_details.append({
-                    'OpName': row['author_fullname'],
+                    'OpName': row['author'],
                     'OpFollowers': None # TODO: get followers from reddit api
                 })
             db.execute_insert('OpInfo', op_details)
 
             content_details = []
-            for ix, row in data.iterrows():
+            for ix, row in pandas_data.iterrows():
                 content_details.append({
-                    'PostId': row['PostId'],
+                    'PostId': row['id'],
                     'Content': row['selftext'],
                     'Type': None, # TODO: get type from reddit api
                     'MediaPath': None, # TODO: get media path from reddit api
@@ -83,7 +84,7 @@ class VideoGenerationPipeline:
                     'Rank': None,
                     'RankingAlgorithm': None,
                     'EngagmentTableId': None,
-                    'OpInfoId': row['author_fullname'],
+                    'OpInfoId': row['author'],
                     'PostProductionTableId': None
                 })
             db.execute_insert('RedditPostTable', content_details)
