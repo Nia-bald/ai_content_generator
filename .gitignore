@@ -3,10 +3,13 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.log
 .env
 .venv/
 env/
 venv/
+generated_audio/
+media/
 .DS_Store
 
 # VSCode

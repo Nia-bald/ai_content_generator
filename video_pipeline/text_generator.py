@@ -1,32 +1,24 @@
 import pandas as pd
+from utils.units import Task
 from scripts.LLM import LLMClient
 
 class TextGenerator:
     def __init__(self):
         self.llm = LLMClient()
 
-    def generate(self, task):
-        generated_data = {}
+    def generate(self, task: Task):
 
-        for subreddit, df in task.processed_reddit_data.items():
-            if df.empty:
-                continue
+        for subreddit, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
 
-            narrations = []
-            for _, row in df.iterrows():
-                title = row.get("title", "").strip()
-                body = row.get("selftext", "").strip()
+            for post_id, post_data in reddit_data.post_data_dict.items():
+                if not post_data.filtered_out:
+                    title = post_data.title
+                    body = post_data.selftext
 
-                try:
-                    narration = self.llm.generate_narration(title, body, subreddit)
-                except Exception as e:
-                    print(f"[TextGenerator] LLM error for r/{subreddit}: {e}")
-                    narration = f"{title}. {body}"
-
-                narrations.append(narration)
-
-            generated_data[subreddit] = narrations
-            print(f"[TextGenerator] Generated {len(narrations)} narrations for r/{subreddit}")
-
-        task.generated_reddit_data = generated_data
+                    try:
+                        narration = self.llm.generate_narration(title, body, subreddit)
+                    except Exception as e:
+                        print(f"[TextGenerator] LLM error for r/{subreddit}: {e}")
+                        narration = f"{title}. {body}"
+                    post_data.narration = narration
         return task

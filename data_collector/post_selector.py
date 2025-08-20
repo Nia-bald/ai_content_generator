@@ -9,15 +9,6 @@ class PostSelector:
     def select(self, task: Task):
         post_selection_strategy = PostSelectionStrategyFactory().get_strategy(task)
         task = post_selection_strategy.select(task)  # Logic to select posts 
-        task = self.populate_post_details(task)
-        return task
-
-    def populate_post_details(self, task: Task):
-        for subreddit, reddit_data in task.processed_reddit_data.items():
-            reddit_data['PostId'] = [str(uuid.uuid4()) for _ in range(len(reddit_data))]
-            reddit_data['Tags'] = ""
-            reddit_data['Description'] = ""
-            task.processed_reddit_data[subreddit] = reddit_data
         return task
 
 class PostSelectionStrategy(ABC):
@@ -28,15 +19,13 @@ class PostSelectionStrategy(ABC):
 
 class MostUpvotedPostStrategy(PostSelectionStrategy):
     def select(self, task: Task):
-        subreddit_to_reddit_data_list = {}
         for subreddit, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
-            data = reddit_data.data
-            reddit_data_list = [row.get('data') for row in data['data'].get('children')]
-            reddit_data_df = pd.DataFrame(reddit_data_list)
+            pandas_data = reddit_data.to_pandas_dataframe(filter_out=False)
             # TODO: these top_x values should come from config ans should be diff for each individual subreddit
-            top_10_posts = reddit_data_df.sort_values(by='ups', ascending=False).head(10)
-            subreddit_to_reddit_data_list[subreddit] = top_10_posts
-        task.processed_reddit_data = subreddit_to_reddit_data_list
+            top_10_posts = pandas_data.sort_values(by='ups', ascending=False).head(3)
+            top_10_post_id = list(top_10_posts['id'].values)
+            for post_id in top_10_post_id:
+                reddit_data.post_data_dict.get(post_id).filtered_out = False
         return task
 
 
