@@ -13,7 +13,7 @@ from video_pipeline.video_uploader import VideoUploader
 from video_pipeline.video_downloader import VideoDownloader
 
 from utils.units import Task
-from utils.data_base import LocalDatabase
+from utils.data_base import LocalDatabase, DataSaver
 import uuid
 import logging
 import time
@@ -36,8 +36,10 @@ class VideoGenerationPipeline:
     def __init__(self, db_path: str = 'database.db'):
         logger.info("Initializing VideoGenerationPipeline")
         try:
+            self.db = LocalDatabase(db_path)
+            self.data_saver = DataSaver(self.db)
             self.subreddit_finder = SubredditFinder()
-            self.reddit_collector = RedditDataCollector()
+            self.reddit_collector = RedditDataCollector(self.db)
             self.classifier = ClassificationAlgorithm()
             self.ranker = RankingAlgorithm()
             self.post_selector = PostSelector()
@@ -48,7 +50,6 @@ class VideoGenerationPipeline:
             self.uploader = VideoUploader()
             self.channel_finder = ChannelFinder()
             self.video_downloader = VideoDownloader()
-            self.db = LocalDatabase(db_path)
             logger.info("All pipeline components initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize pipeline components: {str(e)}")
@@ -91,8 +92,6 @@ class VideoGenerationPipeline:
                     logger.info(f"Task {i}: Selecting post")
                     task = self.post_selector.select(task)
                     logger.info(f"Task {i}: Post selection completed")
-                    self.save_to_db(task)
-                    logger.info(f"Task {i}: Data saved to database")
                     
                 if task.should_generate_text == True:
                     logger.info(f"Task {i}: Generating text")
@@ -118,7 +117,12 @@ class VideoGenerationPipeline:
                     logger.info(f"Task {i}: Uploading video")
                     task = self.uploader.upload(task)
                     logger.info(f"Task {i}: Video upload completed")
-                    
+
+                if task.save_to_db == True:
+                    logger.info(f"Task {i}: Uploading video")
+                    task = self.data_saver.save_task(task)
+                    logger.info(f"Task {i}: Video upload completed")
+
                 task_duration = time.time() - task_start_time
                 logger.info(f"Task {i} completed successfully in {task_duration:.2f} seconds")
                 successful_tasks += 1
@@ -134,58 +138,3 @@ class VideoGenerationPipeline:
         logger.info(f"Results: {successful_tasks} successful, {failed_tasks} failed out of {len(task_list)} total tasks")
         
         # Channel finder and downloader can be integrated as needed
-
-    def save_to_db(self, task: Task):
-        logger.info("Starting database save operation")
-        start_time = time.time()
-        
-        try:
-            db = self.db
-            total_posts = 0
-            
-            for subreddit_name, reddit_data in task.reddit_datas.subreddit_to_reddit_data.items():
-                logger.info(f"Processing data for subreddit: {subreddit_name}")
-                pandas_data = reddit_data.to_pandas_dataframe()
-                
-                # Process OpInfo
-                op_details = []
-                for ix, row in pandas_data.iterrows():
-                    op_details.append({
-                        'OpInfoId': row['author_fullname'],
-                        'OpName': row['author'],
-                        'OpFollowers': None # TODO: get followers from reddit api
-                    })
-                
-                logger.info(f"Inserting {len(op_details)} OpInfo records for subreddit {subreddit_name}")
-                db.execute_insert('OpInfo', op_details)
-
-                # Process RedditPostTable
-                content_details = []
-                for ix, row in pandas_data.iterrows():
-                    content_details.append({
-                        'PostId': row['id'],
-                        'Content': row['selftext'],
-                        'Type': None, # TODO: get type from reddit api
-                        'MediaPath': None, # TODO: get media path from reddit api
-                        'SubredditName': subreddit_name,
-                        'Rank': None,
-                        'RankingAlgorithm': None,
-                        'EngagmentTableId': None,
-                        'OpInfoId': row['author'],
-                        'PostProductionTableId': None
-                    })
-                
-                logger.info(f"Inserting {len(content_details)} RedditPostTable records for subreddit {subreddit_name}")
-                db.execute_insert('RedditPostTable', content_details)
-                total_posts += len(content_details)
-            
-            db.close()
-            save_duration = time.time() - start_time
-            logger.info(f"Database save completed successfully in {save_duration:.2f} seconds. Total posts saved: {total_posts}")
-            
-        except Exception as e:
-            save_duration = time.time() - start_time
-            logger.error(f"Database save failed after {save_duration:.2f} seconds: {str(e)}")
-            raise
-            
-        return task

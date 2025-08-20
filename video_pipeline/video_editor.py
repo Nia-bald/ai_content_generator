@@ -116,7 +116,7 @@ class VideoEditor:
             self.logger.info(f"Post {post_data.id}: Writing final video to {output_path}")
             final.write_videofile(output_path)
             self.logger.info(f"Post {post_data.id}: Video generation completed successfully")
-
+            post_data.final_video_path = output_path
             return True
 
         except Exception as e:

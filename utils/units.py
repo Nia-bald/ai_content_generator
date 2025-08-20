@@ -1,5 +1,8 @@
 from enum import Enum
+from pydantic import BaseModel
 import pandas as pd
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Task:
@@ -22,6 +25,7 @@ class Task:
         self.should_select_video = True
         self.should_edit_video = True
         self.should_upload = False
+        self.save_to_db = True
         self.success = None
 
     def __str__(self):
@@ -33,60 +37,46 @@ class PostSelectionStrategyEnum(Enum):
     MOST_RECENT = "MostRecentPostStrategy"
     MOST_CONTROVERSIAL = "MostControversialPostStrategy"
 
-class PostData:
-    def __init__(
-        self,
-        id: str,
-        title: str,
-        selftext: str,
-        subreddit: str,
-        ups=None,
-        score=None,
-        num_comments=None,
-        created_utc=None,
-        author_fullname=None,
-        author=None,
-        permalink=None,
-        upvote_ratio=None,
-        is_self=None,
-        over_18=None,
-        spoiler=None,
-        **kwargs
-    ):
-        self.id = id
-        self.title = title
-        self.selftext = selftext
-        self.subreddit = subreddit
-        self.ups = ups
-        self.score = score
-        self.num_comments = num_comments
-        self.created_utc = created_utc
-        self.author_fullname = author_fullname
-        self.author = author
-        self.permalink = permalink
-        self.upvote_ratio = upvote_ratio
-        self.is_self = is_self
-        self.over_18 = over_18
-        self.spoiler = spoiler
-        self.filtered_out = True
-        self.narration = None
-        self.synthesized_audio_file_path = None
-        self.video_file_path = None
-    
+class PostData(BaseModel):
+    id: str
+    title: str
+    selftext: str
+    subreddit: str
+    ups: int = None
+    score: int = None
+    num_comments: int = None
+    created_utc: float = None
+    author_fullname: str = None
+    author: str = None
+    permalink: str = None
+    upvote_ratio: float = None
+    is_self: bool = None
+    over_18: bool = None
+    spoiler: bool = None
+    filtered_out: bool = True
+    narration: str = None
+    synthesized_audio_file_path: str = None
+    video_file_path: str = None
+    final_video_path: str = None
+
     def __str__(self):
         return f"{self.id}: {self.title} - {self.selftext} - {self.subreddit}"
 
 
 class RedditData:
-    def __init__(self, subreddit: str, data: dict):
+    def __init__(self, subreddit: str, data: dict, distinct_available_post_ids:set):
         self.subreddit = subreddit
         self.data = data
         # Complete: create a dict mapping post_id to post_data for all posts in the subreddit data
-        self.post_data_dict = {
-            post_data.get("data", {}).get("id"): PostData(**post_data.get("data"))
-            for post_data in data.get("data", {}).get("children", [])
-            if post_data.get("data", {}).get("id") is not None
-        }
+        self.post_data_dict = {}
+        for post_data in data.get("data", {}).get("children", []):
+            post_id = post_data.get("data", {}).get("id")
+            if post_id is None:
+                continue
+            if post_id in distinct_available_post_ids:
+                logger.info(f"Post id {post_id} already processed, skipping.")
+                continue
+            self.post_data_dict[post_id] = PostData(**post_data.get("data"))
 
     def __str__(self):
         return f"{self.subreddit}: {self.data}"
@@ -107,23 +97,7 @@ class RedditData:
         for post_id, post_data in self.post_data_dict.items():
             if filter_out and post_data.filtered_out == True:
                 continue
-            row = {
-                "id": post_data.id,
-                "title": post_data.title,
-                "selftext": post_data.selftext,
-                "subreddit": post_data.subreddit,
-                "ups": post_data.ups,
-                "score": post_data.score,
-                "num_comments": post_data.num_comments,
-                "created_utc": post_data.created_utc,
-                "author_fullname": post_data.author_fullname,
-                "author": post_data.author,
-                "permalink": post_data.permalink,
-                "upvote_ratio": post_data.upvote_ratio,
-                "is_self": post_data.is_self,
-                "over_18": post_data.over_18,
-                "spoiler": post_data.spoiler,
-            }
+            row = post_data.dict()
             rows.append(row)
         return pd.DataFrame(rows)
 

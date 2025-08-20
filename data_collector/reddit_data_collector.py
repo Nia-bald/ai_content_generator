@@ -1,4 +1,5 @@
 from utils.units import Task, RedditData, RedditDataList
+from utils.data_base import LocalDatabase
 import requests
 import time
 import logging
@@ -17,7 +18,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class RedditDataCollector:
-    def __init__(self):
+    def __init__(self, db: LocalDatabase = None):
+        self.db = db
         self.reddit_base_url = "https://www.reddit.com"
         self.max_retries = 3
         self.base_delay = 1  # Base delay in seconds
@@ -59,13 +61,15 @@ class RedditDataCollector:
     def collect(self, task: Task):
         logger.info(f"Starting data collection for task with {len(task.possible_subreddits)} subreddits")
         reddit_data_list = RedditDataList([])
+        distinct_available_post_id_df = self.db.execute_read_df("SELECT DISTINCT PostId FROM RedditPostTable")
+        distinct_available_post_ids = set(distinct_available_post_id_df['PostId']) if 'PostId' in distinct_available_post_id_df.columns else set()
         
         for i, subreddit in enumerate(task.possible_subreddits, 1):
             logger.info(f"Processing subreddit {i}/{len(task.possible_subreddits)}: r/{subreddit}")
             url = f"{self.reddit_base_url}/r/{subreddit}/hot.json?limit=50"
             try:
                 data = self._make_reddit_request(url)
-                reddit_data_list.add_reddit_data(RedditData(subreddit, data))
+                reddit_data_list.add_reddit_data(RedditData(subreddit, data, distinct_available_post_ids))
                 logger.info(f"Successfully collected data from r/{subreddit}")
             except requests.RequestException as e:
                 logger.error(f"Failed to collect data from r/{subreddit}: {e}")
