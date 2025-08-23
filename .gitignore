@@ -15,6 +15,7 @@ media/
 # VSCode
 .vscode/
 trash/
+.idea/
 
 # OS
 Thumbs.db
